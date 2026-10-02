@@ -14,7 +14,7 @@ export type DriftConfig = {
 };
 
 // A deliberate one-off: the author kept a value outside the system, with a reason.
-export type DriftException = { file: string; raw?: string; className?: string; reason: string; decidedAt: string };
+export type DriftException = { file: string; raw?: string; selector?: string; className?: string; reason: string; decidedAt: string };
 
 const EXCEPTIONS = () => path.join(root(), "design-system", "exceptions.json");
 

@@ -229,7 +229,7 @@ export function applyChoices(s: ReviewState): ReviewState {
       const decidedAt = new Date().toISOString();
       const reason = choice.reason?.trim() || "Intentional one-off";
       if (ch.element) addException({ file: ch.file, className: ch.element.className, reason, decidedAt });
-      for (const c of ch.colors) addException({ file: ch.file, raw: c.raw, reason, decidedAt });
+      for (const c of ch.colors) addException({ file: ch.file, raw: c.raw, selector: c.selector, reason, decidedAt });
     }
   }
   applyEdits(colorEdits, componentEdits, catalog);

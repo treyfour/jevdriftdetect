@@ -102,7 +102,12 @@ export async function scan(opts: { base?: string } = {}): Promise<Report> {
   const literals = files
     .flatMap((f) => extractColors(f, sources.get(f)!))
     .filter((l) => keep(l.file, l.line))
-    .filter((l) => !exceptions.some((x) => x.file === l.file && x.raw?.toLowerCase() === l.raw.toLowerCase()));
+    .filter(
+      (l) =>
+        !exceptions.some(
+          (x) => x.file === l.file && x.raw?.toLowerCase() === l.raw.toLowerCase() && (!x.selector || x.selector === l.selector),
+        ),
+    );
   const elements = files
     .flatMap((f) => extractElements(f, sources.get(f)!))
     .filter((e) => keep(e.file, e.line))
