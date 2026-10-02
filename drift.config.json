@@ -1,0 +1,9 @@
+{
+  "include": ["demo"],
+  "extensions": [".tsx", ".ts", ".css"],
+  "gate": {
+    "base": "main",
+    "block": ["autofix"],
+    "warn": ["review", "propose"]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "components": [
+    {
+      "name": "Button",
+      "import": "@/components/ui/button",
+      "variants": {
+        "default": "primary action button: submit, add to cart, checkout, main call to action",
+        "secondary": "secondary or cancel action button with a subtle background",
+        "destructive": "button for delete, remove, or other irreversible actions",
+        "ghost": "low-emphasis icon or toolbar button with no background"
+      }
+    },
+    {
+      "name": "Badge",
+      "import": "@/components/ui/badge",
+      "variants": {
+        "default": "neutral label or tag, e.g. a category or a count",
+        "success": "positive status label, e.g. in stock, paid, active",
+        "warning": "cautionary status label, e.g. low stock, pending",
+        "destructive": "error or failed status label, e.g. out of stock, payment failed"
+      }
+    },
+    {
+      "name": "Alert",
+      "import": "@/components/ui/alert",
+      "variants": {
+        "default": "informational message banner",
+        "warning": "warning message banner, e.g. shipping delays, action needed soon",
+        "destructive": "error message banner, e.g. payment failed, form errors"
+      }
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import type { ComponentSpec, Lane, Token } from "./types";
+
+const root = () => process.cwd();
+const TOKENS = () => path.join(root(), "design-system", "tokens.json");
+const TOKENS_CSS = () => path.join(root(), "app", "tokens.css");
+
+export type DriftConfig = {
+  include: string[];
+  extensions: string[];
+  gate: { base: string; block: Lane[]; warn: Lane[] };
+};
+
+export function loadConfig(): DriftConfig {
+  return JSON.parse(readFileSync(path.join(root(), "drift.config.json"), "utf8"));
+}
+
+export function loadTokens(): Token[] {
+  return JSON.parse(readFileSync(TOKENS(), "utf8")).tokens;
+}
+
+export function loadComponents(): ComponentSpec[] {
+  return JSON.parse(readFileSync(path.join(root(), "design-system", "components.json"), "utf8")).components;
+}
+
+export type AnswerKey = {
+  colors: { file: string; raw: string; lane: Lane; token?: string; why?: string }[];
+  components: { file: string; className: string; lane: Lane; component?: string; why?: string }[];
+};
+
+export function loadAnswerKey(): AnswerKey | null {
+  try {
+    return JSON.parse(readFileSync(path.join(root(), "design-system", "answer_key.json"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+export function writeTokensCss(tokens: Token[]) {
+  const body = tokens.map((t) => `  ${t.name}: ${t.value};`).join("\n");
+  writeFileSync(TOKENS_CSS(), `/* Generated from design-system/tokens.json. Do not edit by hand. */\n:root {\n${body}\n}\n`);
+}
+
+export function addToken(token: Token) {
+  const tokens = loadTokens();
+  if (tokens.some((t) => t.name === token.name)) return tokens;
+  tokens.push(token);
+  writeFileSync(TOKENS(), JSON.stringify({ tokens }, null, 2) + "\n");
+  writeTokensCss(tokens);
+  return tokens;
+}

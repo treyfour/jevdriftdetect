@@ -1,0 +1,34 @@
+{
+  "_note": "Planted drift in demo/. Written before any Jev run. Lanes: autofix | review | propose | leave.",
+  "colors": [
+    { "file": "demo/Header.tsx", "raw": "#e5e7eb", "lane": "autofix", "token": "--border", "why": "header divider, near-duplicate of the border token" },
+    { "file": "demo/Header.tsx", "raw": "#3c82f6", "lane": "autofix", "token": "--primary", "why": "active nav link, typo of primary" },
+    { "file": "demo/ProductCard.tsx", "raw": "#737373", "lane": "autofix", "token": "--muted-foreground", "why": "metadata caption" },
+    { "file": "demo/ProductCard.tsx", "raw": "#0b0b0b", "lane": "autofix", "token": "--foreground", "why": "price text via Tailwind arbitrary value" },
+    { "file": "demo/ProductCard.tsx", "raw": "#DC2626", "lane": "review", "why": "sale price is red but is not an error; a designer should decide" },
+    { "file": "demo/ProductCard.tsx", "raw": "#3B83F6", "lane": "autofix", "token": "--primary", "why": "add-to-cart CTA background" },
+    { "file": "demo/ProductCard.tsx", "raw": "#fff", "lane": "autofix", "token": "--primary-foreground", "why": "text on the CTA: same value as --background, different role" },
+    { "file": "demo/StockBadge.tsx", "raw": "#16a34a", "lane": "autofix", "token": "--success", "why": "in-stock status; far in value (dE 14) but same role" },
+    { "file": "demo/PromoBanner.tsx", "raw": "#E5484D", "lane": "propose", "why": "brand red promo badge: close to --destructive (dE 8) but a different role, needs a brand token" },
+    { "file": "demo/CheckoutForm.tsx", "raw": "#ef4343", "lane": "autofix", "token": "--destructive", "why": "remove-item button" },
+    { "file": "demo/CheckoutForm.tsx", "raw": "rgb(239, 68, 68)", "lane": "autofix", "token": "--destructive", "why": "form validation error" },
+    { "file": "demo/SalesChart.tsx", "raw": "#8B5CF6", "lane": "propose", "why": "data-viz series, no chart tokens yet" },
+    { "file": "demo/SalesChart.tsx", "raw": "#14B8A6", "lane": "propose", "why": "data-viz series, no chart tokens yet" },
+    { "file": "demo/Footer.tsx", "raw": "#71717b", "lane": "autofix", "token": "--muted-foreground", "why": "legal copy" },
+    { "file": "demo/Footer.tsx", "raw": "#1DA1F2", "lane": "leave", "why": "third-party brand logo color must stay exact" },
+    { "file": "demo/ShippingNotice.tsx", "raw": "#f59e0b", "lane": "autofix", "token": "--warning", "why": "warning banner border" },
+    { "file": "demo/demo.css", "raw": "#fff", "lane": "autofix", "token": "--background", "why": "page background: same value as --primary-foreground, different role" },
+    { "file": "demo/demo.css", "raw": "#2563EB", "lane": "review", "why": "primary hover state with no hover token; designer decides" },
+    { "file": "demo/demo.css", "raw": "#93c5fd", "lane": "autofix", "token": "--ring", "why": "focus outline" },
+    { "file": "demo/demo.css", "raw": "#f4f4f6", "lane": "autofix", "token": "--secondary", "why": "loading skeleton" }
+  ],
+  "components": [
+    { "file": "demo/ProductCard.tsx", "className": "add-to-cart", "lane": "autofix", "component": "Button/default" },
+    { "file": "demo/StockBadge.tsx", "className": "stock-badge", "lane": "autofix", "component": "Badge/success" },
+    { "file": "demo/PromoBanner.tsx", "className": "promo-badge", "lane": "propose", "why": "no promo badge variant exists" },
+    { "file": "demo/CheckoutForm.tsx", "className": "remove-item", "lane": "autofix", "component": "Button/destructive" },
+    { "file": "demo/ShippingNotice.tsx", "className": "shipping-notice", "lane": "autofix", "component": "Alert/warning" },
+    { "file": "demo/Header.tsx", "className": "nav-link link", "lane": "leave", "why": "plain nav link, no component needed" },
+    { "file": "demo/Footer.tsx", "className": "social-twitter-logo", "lane": "leave", "why": "plain social link, no component needed" }
+  ]
+}

@@ -1,0 +1,23 @@
+name: Design drift gate
+
+on:
+  pull_request:
+    paths: ["demo/**", "design-system/**", "drift.config.json"]
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the gate diffs against the merge base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Judges only lines this PR adds. Fails on drift that already has a token or
+      # component; net-new values pass with design requests in the job summary.
+      - run: npm run drift:gate -- --base origin/${{ github.base_ref }}
+        env:
+          JEV_API_KEY: ${{ secrets.JEV_API_KEY }}

@@ -1,0 +1,17 @@
+.store-page {
+  background: #fff;
+  min-height: 100vh;
+}
+
+.link:hover {
+  color: #2563EB;
+}
+
+.search-input:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.skeleton {
+  background: #f4f4f6;
+}
