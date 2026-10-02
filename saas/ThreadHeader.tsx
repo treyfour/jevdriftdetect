@@ -1,4 +1,4 @@
-import { ShareIcon, SparklesIcon } from "lucide-react";
+import { ShareIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ThreadHeader() {
@@ -9,7 +9,6 @@ export function ThreadHeader() {
         <span className="text-xs text-muted-foreground">Shared with Support ops</span>
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" type="button"><SparklesIcon />Summarize</Button>
         <Button variant="outline" size="sm">
           <ShareIcon />
           Share
