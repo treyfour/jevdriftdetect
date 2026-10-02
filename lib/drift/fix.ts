@@ -20,8 +20,10 @@ export function componentCode(f: ComponentFinding, catalog: ComponentSpec[]): { 
   const spec = catalog.find((c) => c.name === name)!;
   const text = f.text.replace(/\s*[▾▼⌄]\s*$/, "").trim(); // components draw their own chevrons
   const icon = f.icon && f.lucide ? `<${f.lucide} />` : "";
+  // Carry over compact sizing (py-1.5, h-7, text-xs) as the component's own small size.
+  const small = name === "Button" && /(^|\s)(py-1(\.5)?|py-0\.5|h-7|h-6|text-xs)(\s|$)/.test(f.classes) ? ` size="sm"` : "";
   const code = spec.template
-    .replace("{variant}", variant && variant !== "default" ? ` variant="${variant}"` : "")
+    .replace("{variant}", (variant && variant !== "default" ? ` variant="${variant}"` : "") + small)
     .replace("{attrs}", f.attrs ? ` ${f.attrs}` : "")
     .replace("{icon}", icon)
     .replace("{children}", text)

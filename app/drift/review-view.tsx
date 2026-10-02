@@ -13,6 +13,12 @@ import { ChoiceGroup, PreviewFrame, type ChoiceOption } from "./review-client";
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
+// Where each Acme Desk file renders inside the 1180×760 preview, for full-size close-ups.
+const CLOSE_UPS: Record<string, { label: string; crop: { x: number; y: number; w: number; h: number } }> = {
+  "saas/ThreadHeader.tsx": { label: "Thread header", crop: { x: 600, y: 0, w: 580, h: 60 } },
+  "saas/Composer.tsx": { label: "Composer", crop: { x: 330, y: 600, w: 780, h: 160 } },
+};
+
 const UNITLESS = new Set(["fontWeight", "opacity", "lineHeight", "zIndex", "flex"]);
 const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
@@ -239,7 +245,7 @@ export function ReviewView() {
           <p className="r-branch">
             <code>{info.branch}</code> <span aria-hidden>→</span> <code>{base}</code>
           </p>
-          <h1>{info.commits.at(-1)?.subject ?? state?.accepted?.summary[0]}</h1>
+          <h1>{pr?.title ?? info.commits.at(-1)?.subject}</h1>
           <p className="r-meta">
             {info.commits.length} commit{info.commits.length === 1 ? "" : "s"} by {[...new Set(info.commits.map((c) => c.author))].join(", ")}
             {pr && (
@@ -318,10 +324,14 @@ export function ReviewView() {
               </p>
             </div>
             <PreviewFrame src="/app" version={version} label="Acme Desk with your choices applied" />
-            <figure className="r-zoom">
-              <figcaption>Where the changes land: the composer, at full size</figcaption>
-              <PreviewFrame src="/app" version={version} label="Composer close-up" crop={{ x: 330, y: 600, w: 780, h: 160 }} />
-            </figure>
+            {[...new Set(state!.changes.map((c) => c.file))]
+              .filter((f) => CLOSE_UPS[f])
+              .map((f) => (
+                <figure className="r-zoom" key={f}>
+                  <figcaption>{CLOSE_UPS[f].label}, at full size</figcaption>
+                  <PreviewFrame src="/app" version={version} label={`${CLOSE_UPS[f].label} close-up`} crop={CLOSE_UPS[f].crop} />
+                </figure>
+              ))}
 
             {!state!.accepted ? (
               <div className="r-accept">

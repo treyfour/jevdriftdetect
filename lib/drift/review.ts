@@ -83,7 +83,8 @@ function keepTokens(colors: ColorFinding[], owner: string): KeepToken[] {
     if (exact) return { name: exact.name, value: exact.value, usage: exact.usage, isNew: false };
     const state = c.property.includes(" ") ? `-${c.property.split(" ")[0]}` : ""; // hover background -> -hover
     const prop = /color/i.test(c.property) && !/background/i.test(c.property) ? "fg" : "bg";
-    const name = c.proposal?.name ?? `--${slug(owner)}${colors.length > 1 ? `-${prop}${state}` : ""}`;
+    // Inside an element, name tokens after the element; a lone color can use Jev's role name.
+    const name = (colors.length === 1 && c.proposal?.name) || `--${slug(owner)}${colors.length > 1 ? `-${prop}${state}` : ""}`;
     const near = c.candidates[0];
     return {
       name,
@@ -264,12 +265,12 @@ function push(): { pushed: boolean; pushError?: string } {
 }
 
 // The open PR for this branch, via the local gh CLI. Null when gh is missing or there's no PR.
-export function pullRequest(): { number: number; url: string; checks: string } | null {
+export function pullRequest(): { number: number; url: string; title: string; checks: string } | null {
   try {
-    const out = execFileSync("gh", ["pr", "view", "--json", "number,url,statusCheckRollup"], { encoding: "utf8", timeout: 5000, cwd: process.cwd() });
-    const pr = JSON.parse(out) as { number: number; url: string; statusCheckRollup: { context?: string; name?: string; state?: string; status?: string; conclusion?: string }[] };
+    const out = execFileSync("gh", ["pr", "view", "--json", "number,url,title,statusCheckRollup"], { encoding: "utf8", timeout: 5000, cwd: process.cwd() });
+    const pr = JSON.parse(out) as { number: number; url: string; title: string; statusCheckRollup: { context?: string; name?: string; state?: string; status?: string; conclusion?: string }[] };
     const drift = pr.statusCheckRollup.find((c) => (c.context ?? c.name ?? "").startsWith("Drift"));
-    return { number: pr.number, url: pr.url, checks: drift?.state ?? drift?.conclusion ?? drift?.status ?? "" };
+    return { number: pr.number, url: pr.url, title: pr.title, checks: drift?.state ?? drift?.conclusion ?? drift?.status ?? "" };
   } catch {
     return null;
   }
