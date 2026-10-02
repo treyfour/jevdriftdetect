@@ -1,6 +1,7 @@
 import { ArrowUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function Composer() {
   return (
@@ -11,7 +12,7 @@ export function Composer() {
           placeholder="Ask about customers, tickets or refunds"
         />
         <div className="flex items-center justify-between pt-1">
-          <span className="px-1.5 text-xs text-muted-foreground">Shift + Enter for a new line</span>
+          <Select defaultValue="Acme Fast"><SelectTrigger size="sm"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Acme Fast">Acme Fast</SelectItem></SelectContent></Select>
           <Button size="icon-sm" aria-label="Send">
             <ArrowUpIcon />
           </Button>
