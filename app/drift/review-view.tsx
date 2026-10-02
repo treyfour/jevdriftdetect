@@ -1,47 +1,108 @@
-import { createElement, type CSSProperties, type ReactNode } from "react";
+import * as Lucide from "lucide-react";
+import type { ComponentType, ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { loadConfig } from "@/lib/drift/designSystem";
-import { branchInfo, pendingCount, readReview, workingDiff, type Change, type ChoiceKind, type ReviewState } from "@/lib/drift/review";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { loadComponents, loadConfig } from "@/lib/drift/designSystem";
+import { componentCode } from "@/lib/drift/fix";
+import { branchInfo, pendingCount, pullRequest, readReview, workingDiff, type Change, type ChoiceKind, type ReviewState } from "@/lib/drift/review";
 import { acceptReviewAction, buildReviewAction, resetChoicesAction } from "./actions";
 import { ActionButton } from "./buttons";
 import { ChoiceGroup, PreviewFrame, type ChoiceOption } from "./review-client";
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const SYSTEM: Record<string, (p: any) => ReactNode> = { Button, Badge, Alert, Select };
+const UNITLESS = new Set(["fontWeight", "opacity", "lineHeight", "zIndex", "flex"]);
+const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
-// Render the branch's hand-styled element exactly as written: parse its inline style literal.
-function parseStyle(src: string): CSSProperties {
-  const style: Record<string, string | number> = {};
-  for (const part of src.split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/)) {
-    const m = part.match(/^\s*([A-Za-z]+)\s*:\s*(.+?)\s*$/);
-    if (!m) continue;
-    const v = m[2].trim();
-    style[m[1]] = /^["']/.test(v) ? v.slice(1, -1) : Number(v);
-  }
-  return style as CSSProperties;
+// `{ background: "#7C5CFC", padding: "4px 12px", borderRadius: 999 }` -> CSS text
+function styleToCss(body: string): string {
+  return body
+    .split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/)
+    .map((part) => part.match(/^\s*([A-Za-z]+)\s*:\s*(.+?)\s*$/))
+    .filter((m): m is RegExpMatchArray => !!m)
+    .map(([, k, v]) => {
+      const val = /^["']/.test(v) ? v.slice(1, -1) : UNITLESS.has(k) ? v : `${v}px`;
+      return `${kebab(k)}:${val}`;
+    })
+    .join(";");
+}
+
+// Render the branch's markup as written. Arbitrary color utilities become inline styles,
+// because once a preview swaps them out of the source, Tailwind stops generating them.
+function jsxToHtml(src: string): string {
+  return src
+    .replace(/style=\{\{([^}]*)\}\}/g, (_, body) => `style="${styleToCss(body)}"`)
+    .replace(/className="([^"]*)"/g, (_, cls: string) => {
+      const styles: string[] = [];
+      const kept = cls.split(/\s+/).filter((c) => {
+        const m = c.match(/^(bg|text|border)-\[(#[0-9a-fA-F]{3,8}|rgba?\([^\]]+\))\]$/);
+        if (m) styles.push(`${m[1] === "bg" ? "background-color" : m[1] === "text" ? "color" : "border-color"}:${m[2]}`);
+        return !m && !/^[a-z-]+:[a-z]+-\[/.test(c);
+      });
+      return `class="${kept.join(" ")}"` + (styles.length ? ` style="${styles.join(";")}"` : "");
+    })
+    .replace(/\b(strokeWidth|strokeLinecap|strokeLinejoin|fillRule|clipRule)=/g, (_, a: string) => `${kebab(a)}=`)
+    .replace(/=\{(\d+(?:\.\d+)?)\}/g, '="$1"');
 }
 
 function Proposed({ ch }: { ch: Change }) {
-  if (ch.element) {
-    return createElement(ch.element.tag, { style: parseStyle(ch.element.style), className: "r-live" }, ch.element.text);
-  }
-  const c = ch.colors[0];
-  return <span className="r-swatch" style={{ background: c.hex }} />;
+  if (ch.element) return <span className="r-live" dangerouslySetInnerHTML={{ __html: jsxToHtml(ch.element.source) }} />;
+  return <span className="r-swatch" style={{ background: ch.colors[0].hex }} />;
 }
+
+const ICONS = Lucide as unknown as Record<string, ComponentType<{ className?: string }>>;
 
 function Existing({ ch }: { ch: Change }) {
   const ex = ch.existing;
   if (!ex) return <span className="r-none">Nothing in the system is close.</span>;
-  if (ex.type === "component" && ch.element) {
-    const Comp = SYSTEM[ex.component];
-    return Comp ? <Comp variant={ex.variant}>{ch.element.text}</Comp> : <code>{ex.component}</code>;
+  if (ex.type === "token") return <span className="r-swatch" style={{ background: ex.value }} />;
+  const el = ch.element!;
+  const text = el.text.replace(/\s*[▾▼⌄]\s*$/, "");
+  const Icon = el.icon && el.lucide ? ICONS[el.lucide] : undefined;
+  const v = ex.variant as never;
+  const kids: ReactNode = (
+    <>
+      {Icon && <Icon />}
+      {text}
+    </>
+  );
+  switch (ex.component) {
+    case "Button":
+      return <Button variant={v}>{kids}</Button>;
+    case "Badge":
+      return <Badge variant={v}>{kids}</Badge>;
+    case "Alert":
+      return <Alert variant={v}>{kids}</Alert>;
+    case "Select":
+      return (
+        <Select defaultValue={text}>
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={text}>{text}</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    default:
+      return <code>{ex.component}</code>;
   }
-  return <span className="r-swatch" style={{ background: ex.type === "token" ? ex.value : undefined }} />;
+}
+
+function CodePair({ ch }: { ch: Change }) {
+  if (!ch.element || ch.existing?.type !== "component") return null;
+  const swapped = componentCode({ ...ch.element, choice: `${ch.existing.component}/${ch.existing.variant}` }, loadComponents()).code;
+  return (
+    <details className="d-details r-code">
+      <summary>Show code</summary>
+      <p>Existing</p>
+      <pre className="d-pre">{swapped}</pre>
+      <p>Proposed</p>
+      <pre className="d-pre">{ch.element.source}</pre>
+    </details>
+  );
 }
 
 function jevSays(ch: Change): string {
@@ -139,6 +200,7 @@ function ChangeCard({ ch, state, index }: { ch: Change; state: ReviewState; inde
           </div>
         </figure>
       </div>
+      <CodePair ch={ch} />
       <p className="r-jev">
         <span className="r-jev-mark">Jev</span> {jevSays(ch)}
       </p>
@@ -151,6 +213,7 @@ function ChangeCard({ ch, state, index }: { ch: Change; state: ReviewState; inde
 export function ReviewView() {
   const base = process.env.DRIFT_REVIEW_BASE ?? loadConfig().review.base;
   const info = branchInfo(base);
+  const pr = pullRequest();
   const state = readReview();
   const fresh = state && state.branch === info.branch && (state.head === info.head || state.accepted?.sha === info.head);
 
@@ -179,6 +242,14 @@ export function ReviewView() {
           <h1>{info.commits.at(-1)?.subject ?? state?.accepted?.summary[0]}</h1>
           <p className="r-meta">
             {info.commits.length} commit{info.commits.length === 1 ? "" : "s"} by {[...new Set(info.commits.map((c) => c.author))].join(", ")}
+            {pr && (
+              <>
+                {" · "}
+                <a href={pr.url} target="_blank" rel="noreferrer">
+                  PR #{pr.number} on GitHub
+                </a>
+              </>
+            )}
           </p>
         </div>
         <div className="r-pr-status">
@@ -193,7 +264,19 @@ export function ReviewView() {
             <>
               <p className="r-status r-status-ready">Ready to merge</p>
               <p className="r-status-sub">
-                Committed <code>{state!.accepted.sha}</code>. {state!.after?.flagged ?? 0} new drift flags vs {base}.
+                Committed <code>{state!.accepted.sha}</code>
+                {state!.accepted.pushed ? " and pushed" : ""}. {state!.after?.flagged ?? 0} new drift flags vs {base}.
+                {state!.accepted.pushed && pr && (
+                  <>
+                    {" "}
+                    The Drift check on{" "}
+                    <a href={pr.url} target="_blank" rel="noreferrer">
+                      PR #{pr.number}
+                    </a>{" "}
+                    reruns and updates its comment.
+                  </>
+                )}
+                {state!.accepted.pushError && <> Push failed: {state!.accepted.pushError}</>}
               </p>
             </>
           ) : pending ? (

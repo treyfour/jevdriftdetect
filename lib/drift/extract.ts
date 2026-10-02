@@ -48,10 +48,11 @@ export function extractColors(file: string, src: string): ColorLiteral[] {
 
     let syntax: ColorLiteral["syntax"] = isCss ? "css" : "inline";
     let property = "";
-    const tw = before.match(/([a-z]+)-\[$/);
+    // Tailwind arbitrary value, optionally behind a state variant: hover:bg-[#4f46e5]
+    const tw = before.match(/(?:([a-z-]+):)?([a-z]+)-\[$/);
     if (tw) {
       syntax = "tailwind";
-      property = TAILWIND_PROPS[tw[1]] ?? tw[1];
+      property = (tw[1] ? `${tw[1]} ` : "") + (TAILWIND_PROPS[tw[2]] ?? tw[2]);
     } else {
       const p = before.match(/([A-Za-z-]+)\s*:\s*[^:;{}]*$/);
       property = p ? p[1] : "";
@@ -88,36 +89,59 @@ export function extractColors(file: string, src: string): ColorLiteral[] {
   return out;
 }
 
-// Hand-styled elements: <button|span|div|a ... style={{ ... }} ...>text</tag>
-// with a color literal in the inline style. Candidates for an existing component.
-const ELEMENT_RE = /<(button|span|div|a)\b([^>]*?)\sstyle=\{\{([^}]*)\}\}([^>]*)>([^<{]+)<\/\1>/g;
+// Hand-styled elements: <button|span|div|a ...>text</tag> whose inline style or Tailwind
+// classes carry a color literal. An inline <svg> icon child is allowed (and noted).
+const OPEN_RE = /<(button|span|div|a)\b((?:[^>"{]|"[^"]*"|\{\{[^}]*\}\}|\{[^{}]*\})*)>/g;
+const UTILITY =
+  /^(inline|flex|grid|items|justify|self|place|rounded|text|bg|p[xytrbl]?|m[xytrbl]?|font|hover|focus|gap|border|shadow|ring|outline|whitespace|leading|tracking|size|w|h|min|max|transition|duration|cursor|select|overflow|shrink|grow|line|z|opacity|space|divide|underline|truncate|sr)(-|$)/;
+
+// The author's own class name ("send-button"), ignoring Tailwind utilities. "" if none.
+function semanticClass(classes: string): string {
+  return classes.split(/\s+/).find((c) => /^[a-z]+(-[a-z]+)*$/.test(c) && !UTILITY.test(c)) ?? "";
+}
+
+const ARBITRARY_COLOR = /-\[(?:#[0-9a-fA-F]{3,8}|rgba?\([^\]]+\))\]/;
 
 export function extractElements(file: string, src: string): HandRolledElement[] {
   if (!file.endsWith(".tsx")) return [];
   const starts = lineStarts(src);
   const out: HandRolledElement[] = [];
-  for (const m of src.matchAll(ELEMENT_RE)) {
-    const [source, tag, pre, style, post, text] = m;
-    // Self-closing tags (`<div style={{..}} />`) aren't wrapping text; skip them.
-    if (!text.trim() || post.trim().endsWith("/")) continue;
-    COLOR_RE.lastIndex = 0;
-    if (!COLOR_RE.test(style)) continue;
-    const attrsAll = `${pre} ${post}`;
-    const className = attrsAll.match(/className="([^"]+)"/)?.[1] ?? "";
-    const attrs = attrsAll.replace(/\s*className="[^"]*"/, "").replace(/\s+/g, " ").trim();
+  for (const m of src.matchAll(OPEN_RE)) {
+    const [open, tag, attrsRaw] = m;
+    if (attrsRaw.trim().endsWith("/")) continue; // self-closing
     const start = m.index!;
+    const close = src.indexOf(`</${tag}>`, start + open.length);
+    if (close === -1) continue;
+    const inner = src.slice(start + open.length, close);
+    const icon = inner.match(/<svg[\s\S]*?<\/svg>/)?.[0];
+    const text = inner.replace(/<svg[\s\S]*?<\/svg>/, "").trim();
+    // Only simple elements: text (plus an optional icon), no nested markup or expressions.
+    if (!text || /[<{]/.test(text)) continue;
+    const style = attrsRaw.match(/style=\{\{([^}]*)\}\}/)?.[1]?.trim() ?? "";
+    const classes = attrsRaw.match(/className="([^"]+)"/)?.[1] ?? "";
+    COLOR_RE.lastIndex = 0;
+    const styled = (style && COLOR_RE.test(style)) || ARBITRARY_COLOR.test(classes);
+    if (!styled) continue;
+    const attrs = attrsRaw
+      .replace(/\s*style=\{\{[^}]*\}\}/, "")
+      .replace(/\s*className="[^"]*"/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const end = close + `</${tag}>`.length;
     out.push({
       id: `${file}:el:${start}`,
       file,
       line: lineOf(starts, start),
       start,
-      end: start + source.length,
+      end,
       tag,
-      className,
-      text: text.trim(),
-      style: style.trim(),
+      className: semanticClass(classes),
+      text,
+      style,
+      classes,
+      icon,
       attrs,
-      source,
+      source: src.slice(start, end),
     });
   }
   return out;

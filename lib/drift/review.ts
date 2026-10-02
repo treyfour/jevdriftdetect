@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import path from "node:path";
 import { addException, addToken, loadComponents, loadConfig, loadTokens } from "./designSystem";
 import { applyEdits } from "./fix";
-import { scan } from "./scan";
+import { elementKey, scan } from "./scan";
 import type { ColorFinding, ComponentFinding, Report, RunStats } from "./types";
 
 export type ChoiceKind = "proposed" | "existing" | "keep" | "oneoff";
@@ -39,7 +39,7 @@ export type ReviewState = {
   changes: Change[];
   choices: Record<string, Choice>;
   touched: string[];
-  accepted?: { sha: string; at: string; summary: string[] };
+  accepted?: { sha: string; at: string; summary: string[]; pushed: boolean; pushError?: string };
   after?: { flagged: number; ms: number };
 };
 
@@ -69,7 +69,8 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9-]/g, "");
 
 function titleFor(el?: ComponentFinding, c?: ColorFinding) {
-  const s = el ? el.className.split(/\s+/)[0] : (c?.selector ?? "");
+  if (el && !el.className) return `${el.text} ${el.tag === "a" ? "link" : el.tag}`;
+  const s = el ? el.className : (c?.selector ?? "");
   const words = slug(s).split("-").filter(Boolean).join(" ");
   return words ? words[0].toUpperCase() + words.slice(1) : "Color value";
 }
@@ -80,8 +81,9 @@ function keepTokens(colors: ColorFinding[], owner: string): KeepToken[] {
     // Keep the designer's exact value. Reuse a token only if it's the same value and role.
     const exact = tokens.find((t) => t.value.toUpperCase() === c.hex && c.lane === "autofix" && c.best?.token === t.name);
     if (exact) return { name: exact.name, value: exact.value, usage: exact.usage, isNew: false };
+    const state = c.property.includes(" ") ? `-${c.property.split(" ")[0]}` : ""; // hover background -> -hover
     const prop = /color/i.test(c.property) && !/background/i.test(c.property) ? "fg" : "bg";
-    const name = c.proposal?.name ?? `--${slug(owner)}${colors.length > 1 ? `-${prop}` : ""}`;
+    const name = c.proposal?.name ?? `--${slug(owner)}${colors.length > 1 ? `-${prop}${state}` : ""}`;
     const near = c.candidates[0];
     return {
       name,
@@ -93,7 +95,7 @@ function keepTokens(colors: ColorFinding[], owner: string): KeepToken[] {
   });
 }
 
-function groupChanges(report: Report): Change[] {
+export function groupChanges(report: Report): Change[] {
   const changes: Change[] = [];
   const claimed = new Set<string>();
   for (const el of report.components.filter((c) => c.lane !== "leave")) {
@@ -112,7 +114,7 @@ function groupChanges(report: Report): Change[] {
       element: el,
       colors,
       existing: top ? { type: "component", component, variant, p: top[1] } : undefined,
-      keep: keepTokens(colors, el.className || el.tag),
+      keep: keepTokens(colors, el.className || `${el.text}-${el.tag}`),
       recommended: el.lane === "autofix" ? "existing" : el.lane === "propose" ? "keep" : undefined,
     });
   }
@@ -228,7 +230,7 @@ export function applyChoices(s: ReviewState): ReviewState {
     if (choice.kind === "oneoff") {
       const decidedAt = new Date().toISOString();
       const reason = choice.reason?.trim() || "Intentional one-off";
-      if (ch.element) addException({ file: ch.file, className: ch.element.className, reason, decidedAt });
+      if (ch.element) addException({ file: ch.file, className: elementKey(ch.element), reason, decidedAt });
       for (const c of ch.colors) addException({ file: ch.file, raw: c.raw, selector: c.selector, reason, decidedAt });
     }
   }
@@ -243,6 +245,34 @@ export function setChoice(id: string, choice: Choice): ReviewState | null {
   if (!s || s.accepted) return s;
   s.choices[id] = choice;
   return applyChoices(s);
+}
+
+// Push the resolution commit so the PR's Drift check reruns and updates its comment.
+// Only when the branch tracks a remote; a local-only demo just commits.
+function push(): { pushed: boolean; pushError?: string } {
+  try {
+    git("rev-parse", "--abbrev-ref", "@{upstream}");
+  } catch {
+    return { pushed: false };
+  }
+  try {
+    git("push");
+    return { pushed: true };
+  } catch (err) {
+    return { pushed: false, pushError: String(err).split("\n")[0].slice(0, 200) };
+  }
+}
+
+// The open PR for this branch, via the local gh CLI. Null when gh is missing or there's no PR.
+export function pullRequest(): { number: number; url: string; checks: string } | null {
+  try {
+    const out = execFileSync("gh", ["pr", "view", "--json", "number,url,statusCheckRollup"], { encoding: "utf8", timeout: 5000, cwd: process.cwd() });
+    const pr = JSON.parse(out) as { number: number; url: string; statusCheckRollup: { context?: string; name?: string; state?: string; status?: string; conclusion?: string }[] };
+    const drift = pr.statusCheckRollup.find((c) => (c.context ?? c.name ?? "").startsWith("Drift"));
+    return { number: pr.number, url: pr.url, checks: drift?.state ?? drift?.conclusion ?? drift?.status ?? "" };
+  } catch {
+    return null;
+  }
 }
 
 export function branchInfo(base: string) {
@@ -291,7 +321,7 @@ export async function acceptReview(): Promise<ReviewState | null> {
   const after = await scan({ base: s.base });
   const next: ReviewState = {
     ...s,
-    accepted: { sha: git("rev-parse", "--short", "HEAD"), at: new Date().toISOString(), summary },
+    accepted: { sha: git("rev-parse", "--short", "HEAD"), at: new Date().toISOString(), summary, ...push() },
     after: {
       flagged: after.colors.filter((c) => c.lane !== "leave").length + after.components.filter((c) => c.lane !== "leave").length,
       ms: after.stats.ms,

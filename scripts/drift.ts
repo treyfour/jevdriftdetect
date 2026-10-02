@@ -5,6 +5,7 @@ import { appendFileSync, existsSync } from "node:fs";
 import { parseColor } from "../lib/drift/color";
 import { gateMarkdown, runGate } from "../lib/drift/gate";
 import { jevApiKey } from "../lib/drift/jev";
+import { runPrCheck } from "../lib/drift/pr";
 import { applyAutofixes } from "../lib/drift/resolve";
 import { readReport, saveReport, scan } from "../lib/drift/scan";
 import type { ColorFinding, ComponentFinding, Lane, Report } from "../lib/drift/types";
@@ -93,6 +94,22 @@ async function main() {
   if (!jevApiKey() && !existsSync(".drift/jev-cache.json")) {
     console.error(c.red("No Jev API key. Set JEV_API_KEY in .env.local."));
     process.exit(2);
+  }
+
+  // CI: sticky PR comment + soft status. Always exits 0; decisions happen in Drift.
+  if (flag("--pr")) {
+    const env = (k: string) => {
+      const v = process.env[k];
+      if (!v) throw new Error(`--pr needs ${k}`);
+      return v;
+    };
+    const pr = env("PR_NUMBER");
+    const reviewUrl = `${process.env.DRIFT_URL ?? "http://localhost:3000/drift"}?pr=${pr}`;
+    const { pending, body } = await runPrCheck({ base: opt("--base") ?? "origin/main", pr, repo: env("GITHUB_REPOSITORY"), sha: env("HEAD_SHA"), reviewUrl });
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, body.replace(/^<!--.*-->\n/, "") + "\n");
+    console.log(body);
+    console.log(pending ? c.yellow(`\n▲ ${pending} design decision(s) open. Soft check set to pending.`) : c.green("\n✔ All design decisions recorded."));
+    return;
   }
 
   if (flag("--gate")) {

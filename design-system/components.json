@@ -1,35 +1,46 @@
 {
+  "library": "shadcn/ui on Base UI primitives",
+  "icons": { "package": "lucide-react", "suffix": "Icon" },
   "components": [
     {
       "name": "Button",
       "import": "@/components/ui/button",
+      "exports": ["Button"],
+      "template": "<Button{variant}{attrs}>{icon}{children}</Button>",
       "variants": {
-        "default": "primary action button: submit, add to cart, checkout, main call to action",
+        "default": "primary action button: submit, send, add to cart, main call to action",
+        "outline": "secondary action in a toolbar or header, e.g. share, export, summarize, filter",
         "secondary": "secondary or cancel action button with a subtle background",
-        "destructive": "button for delete, remove, or other irreversible actions",
-        "ghost": "low-emphasis icon or toolbar button with no background"
+        "ghost": "low-emphasis icon or toolbar button with no background",
+        "destructive": "button for delete, remove, or other irreversible actions"
       }
     },
     {
       "name": "Badge",
       "import": "@/components/ui/badge",
+      "exports": ["Badge"],
+      "template": "<Badge{variant}>{icon}{children}</Badge>",
       "variants": {
-        "default": "neutral label or tag, e.g. a category or a count",
+        "secondary": "neutral label or tag, e.g. a category, count or time window",
         "success": "positive status label, e.g. in stock, paid, active",
-        "warning": "cautionary status label, e.g. low stock, pending",
+        "warning": "cautionary status label, e.g. low stock, pending, act today",
         "destructive": "error or failed status label, e.g. out of stock, payment failed"
       }
     },
     {
       "name": "Select",
       "import": "@/components/ui/select",
+      "exports": ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"],
+      "template": "<Select defaultValue=\"{text}\"><SelectTrigger size=\"sm\"><SelectValue /></SelectTrigger><SelectContent><SelectItem value=\"{text}\">{text}</SelectItem></SelectContent></Select>",
       "variants": {
-        "default": "dropdown trigger for choosing one option from a list, e.g. a model, plan, or filter"
+        "default": "dropdown for choosing one option from a list, e.g. a model, plan, or filter"
       }
     },
     {
       "name": "Alert",
       "import": "@/components/ui/alert",
+      "exports": ["Alert"],
+      "template": "<Alert{variant}>{icon}{children}</Alert>",
       "variants": {
         "default": "informational message banner",
         "warning": "warning message banner, e.g. shipping delays, action needed soon",

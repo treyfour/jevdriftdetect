@@ -1,6 +1,6 @@
 {
   "include": ["demo", "saas"],
-  "review": { "base": "main" },
+  "review": { "base": "origin/main" },
   "extensions": [".tsx", ".ts", ".css"],
   "gate": {
     "base": "HEAD",

@@ -1,19 +1,42 @@
 #!/usr/bin/env bash
-# Recreates the demo PR: feature/composer-polish = <base> + a teammate's composer polish.
-# Safe to rerun; it resets only the demo branch. Usage: npm run demo:branch [base]
+# Recreates the demo PR: feature/composer-polish = <base> + two commits from two "teammates":
+#   1. an AI coding agent adds a Summarize action (hand-rolled, indigo, inline SVG)
+#   2. a designer adds a violet model picker
+# Then force-pushes and opens (or refreshes) the GitHub PR. Safe to rerun between rehearsals.
+# Usage: npm run demo:branch [base]   (default: origin/main)   DEMO_PUSH=0 to stay local.
 set -euo pipefail
-BASE="${1:-main}"
+BASE="${1:-origin/main}"
 BRANCH="feature/composer-polish"
 
 if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "Working tree has uncommitted changes. Commit or run 'npm run demo:review-reset' first." >&2
+  echo "Working tree has uncommitted changes. Commit or discard them first." >&2
   exit 1
 fi
 
-git switch -C "$BRANCH" "$BASE" >/dev/null
+[[ "$BASE" == origin/* ]] && git fetch -q origin "${BASE#origin/}"
+git switch -q -C "$BRANCH" "$BASE"
+
+cp scripts/fixtures/ThreadHeader.branch.tsx saas/ThreadHeader.tsx
+git add saas/ThreadHeader.tsx
+git -c user.name="Acme Coding Agent" -c user.email="agent@acme.example" \
+  commit -q -m "Add Summarize thread action to the chat header"
+
 cp scripts/fixtures/Composer.branch.tsx saas/Composer.tsx
 git add saas/Composer.tsx
 git -c user.name="Sam Rivera (Design)" -c user.email="sam@acme.example" \
-  commit -q -m "Polish chat composer: model picker and send button"
+  commit -q -m "Composer: model picker for Acme Fast"
+
 rm -f .drift/review.json
-echo "On $BRANCH, one commit ahead of $BASE. Open /drift to review."
+
+if [[ "${DEMO_PUSH:-1}" == "1" ]]; then
+  git push -q --force-with-lease -u origin "$BRANCH"
+  if ! gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+    gh pr create --base "${BASE#origin/}" --head "$BRANCH" \
+      --title "Chat: Summarize action and model picker" \
+      --body "Adds a Summarize action to the thread header (agent-authored) and a model picker to the composer (design)." >/dev/null
+  fi
+  echo "Pushed $BRANCH. PR: $(gh pr view "$BRANCH" --json url --jq .url)"
+  echo "The Drift check posts its comment in about a minute."
+else
+  echo "On $BRANCH, two commits ahead of $BASE (not pushed)."
+fi

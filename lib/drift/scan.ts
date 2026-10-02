@@ -11,9 +11,12 @@ import { extractColors, extractElements } from "./extract";
 import type { ColorFinding, ComponentFinding, Lane, Report, Token } from "./types";
 
 const BLOCK_DELTA_E = 30; // loose: only rules out obviously unrelated tokens
-const MAX_CANDIDATES = 3;
+const MAX_CANDIDATES = 4;
 const BASELINE_DELTA_E = 10; // what a distance-only linter would auto-merge
 const GAP_THRESHOLD = 0.5;
+
+// Stable handle for an element in exceptions: its own class name, else its text.
+export const elementKey = (e: { className: string; text: string }) => e.className || `text:${e.text}`;
 
 export const REPORT_PATH = () => path.join(process.cwd(), ".drift", "report.json");
 export const GATE_PATH = () => path.join(process.cwd(), ".drift", "gate.json");
@@ -111,7 +114,7 @@ export async function scan(opts: { base?: string } = {}): Promise<Report> {
   const elements = files
     .flatMap((f) => extractElements(f, sources.get(f)!))
     .filter((e) => keep(e.file, e.line))
-    .filter((e) => !exceptions.some((x) => x.file === e.file && x.className === e.className));
+    .filter((e) => !exceptions.some((x) => x.file === e.file && x.className === elementKey(e)));
 
   // Block: nearest tokens by deltaE. Pure code.
   const blocked = literals.map((l) => {

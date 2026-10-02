@@ -207,6 +207,18 @@
   color: var(--d-graphite);
 }
 
+.r-code > p {
+  margin: 8px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--d-graphite);
+}
+.r-code .d-pre {
+  margin-top: 2px;
+}
+.r-meta a {
+  color: var(--d-ink);
+}
 .r-jev {
   margin: 0;
   font-size: 14px;

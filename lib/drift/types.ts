@@ -5,6 +5,8 @@ export type Token = { name: string; value: string; usage: string };
 export type ComponentSpec = {
   name: string;
   import: string;
+  exports: string[];
+  template: string; // {variant} {attrs} {icon} {children} {text}
   variants: Record<string, string>;
 };
 
@@ -64,13 +66,16 @@ export type HandRolledElement = {
   tag: string;
   className: string;
   text: string;
-  style: string;
+  style: string; // inline style literal, if any
+  classes: string; // className value, if any
+  icon?: string; // inline <svg> child, if any
   attrs: string; // non-style, non-className attributes, kept on swap
   source: string;
 };
 
 export type ComponentFinding = HandRolledElement & {
   choice: string; // "Button/default" | "none"
+  lucide?: string; // suggested Lucide icon export, when the element hand-rolls an <svg>
   probabilities: Record<string, number>;
   confidence: number;
   lane: Lane;
