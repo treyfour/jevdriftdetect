@@ -3,7 +3,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { loadConfig, loadTokens } from "@/lib/drift/designSystem";
+import { loadConfig } from "@/lib/drift/designSystem";
 import { branchInfo, pendingCount, readReview, workingDiff, type Change, type ChoiceKind, type ReviewState } from "@/lib/drift/review";
 import { acceptReviewAction, buildReviewAction, resetChoicesAction } from "./actions";
 import { ActionButton } from "./buttons";
@@ -153,7 +153,6 @@ export function ReviewView() {
   const info = branchInfo(base);
   const state = readReview();
   const fresh = state && state.branch === info.branch && (state.head === info.head || state.accepted?.sha === info.head);
-  const tokens = loadTokens();
 
   if (!info.commits.length && !state?.accepted) {
     return (
@@ -218,7 +217,7 @@ export function ReviewView() {
           <div className="r-changes">
             <p className="r-intro">
               Jev reviewed {state!.stats.literals} new colors and {state!.stats.elements} new elements in {state!.stats.ms} ms and flagged {state!.changes.length}{" "}
-              change{state!.changes.length === 1 ? "" : "s"} against {tokens.length} tokens.
+              change{state!.changes.length === 1 ? "" : "s"} for a decision.
             </p>
             {state!.changes.map((ch, i) => (
               <ChangeCard key={ch.id} ch={ch} state={state!} index={i} />
@@ -236,6 +235,10 @@ export function ReviewView() {
               </p>
             </div>
             <PreviewFrame src="/app" version={version} label="Acme Desk with your choices applied" />
+            <figure className="r-zoom">
+              <figcaption>Where the changes land: the composer, at full size</figcaption>
+              <PreviewFrame src="/app" version={version} label="Composer close-up" crop={{ x: 330, y: 600, w: 780, h: 160 }} />
+            </figure>
 
             {!state!.accepted ? (
               <div className="r-accept">

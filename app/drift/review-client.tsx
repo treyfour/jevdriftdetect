@@ -78,21 +78,41 @@ export function ChoiceGroup({
 }
 
 // The real app in a frame, scaled to fit. Reloads whenever the set of choices changes.
-export function PreviewFrame({ src, version, label }: { src: string; version: string; label: string }) {
+// `crop` zooms into a region of the app (in app pixels), e.g. the area a change touches.
+const APP_W = 1180;
+const APP_H = 760;
+
+export function PreviewFrame({
+  src,
+  version,
+  label,
+  crop,
+}: {
+  src: string;
+  version: string;
+  label: string;
+  crop?: { x: number; y: number; w: number; h: number };
+}) {
   const wrap = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.6);
-  const W = 1180;
-  const H = 760;
+  const [width, setWidth] = useState(600);
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setScale(el.clientWidth / W));
+    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const region = crop ?? { x: 0, y: 0, w: APP_W, h: APP_H };
+  const scale = width / region.w;
   return (
-    <div ref={wrap} className="r-frame" style={{ height: H * scale }}>
-      <iframe key={version} src={src} title={label} style={{ width: W, height: H, transform: `scale(${scale})` }} />
+    <div ref={wrap} className="r-frame" style={{ height: region.h * scale }}>
+      <iframe
+        key={version}
+        src={src}
+        title={label}
+        tabIndex={crop ? -1 : undefined}
+        style={{ width: APP_W, height: APP_H, transform: `scale(${scale}) translate(${-region.x}px, ${-region.y}px)` }}
+      />
     </div>
   );
 }

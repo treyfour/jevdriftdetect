@@ -180,14 +180,12 @@ function requestMarkdown(s: ReviewState, ch: Change): string {
       ),
   ];
   if (ch.element) {
-    const ranked = Object.entries(ch.element.probabilities)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([k, p]) => `${k} ${Math.round(p * 100)}%`);
+    const ex = ch.existing?.type === "component" ? ch.existing : undefined;
     lines.push(
       ``,
-      `The element is still hand-styled. If this pattern sticks, promote it to a component variant.`,
-      `Jev's closest existing match: ${ranked.join(", ")}.`,
+      ex && ex.p >= 0.5
+        ? `Jev matched this to **${ex.component} ${ex.variant}** (${Math.round(ex.p * 100)}%), but the designer chose a custom look. Suggested follow-up: add it as a \`${ex.component}\` variant so the next picker doesn't need inline styles.`
+        : `No existing component fits well. Suggested follow-up: design a new component for this pattern.`,
       ``,
       "```tsx",
       ch.element.source,
