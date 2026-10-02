@@ -12,6 +12,7 @@ import {
   applyAllAction,
   applyComponentAction,
   applyTokenAction,
+  fixGateAction,
   runGateAction,
   runScanAction,
 } from "./actions";
@@ -513,6 +514,16 @@ function GateView({ gate }: { gate: Report | null }) {
                 </li>
               ))}
             </ul>
+          )}
+          {gate.gate.blocking > 0 && (
+            <div className="d-gate-fix">
+              <ActionButton action={fixGateAction} pendingLabel="Fixing and rechecking…" variant="primary">
+                Fix {gate.gate.blocking} and recheck
+              </ActionButton>
+              <span>
+                Same as <code>npm run drift -- --fix</code> locally.
+              </span>
+            </div>
           )}
           <details className="d-details">
             <summary>PR comment preview</summary>

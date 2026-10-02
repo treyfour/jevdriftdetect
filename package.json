@@ -10,7 +10,8 @@
     "drift": "tsx scripts/drift.ts",
     "drift:gate": "tsx scripts/drift.ts --gate",
     "drift:fix": "tsx scripts/drift.ts --fix",
-    "demo:reset": "git checkout HEAD -- demo design-system/tokens.json app/tokens.css && rm -f .drift/report.json .drift/gate.json"
+    "demo:reset": "git checkout HEAD -- demo design-system/tokens.json app/tokens.css && rm -f demo/HolidayBanner.tsx .drift/report.json .drift/gate.json",
+    "demo:new-feature": "cp scripts/fixtures/HolidayBanner.tsx demo/HolidayBanner.tsx"
   },
   "dependencies": {
     "next": "16.3.8",

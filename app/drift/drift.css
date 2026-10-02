@@ -588,6 +588,7 @@
   padding: 32px;
 }
 .d-gate-intro h1 {
+  font-weight: 700;
   font-size: clamp(30px, 3.4vw, 48px);
   letter-spacing: -0.04em;
   line-height: 1.02;
@@ -648,6 +649,14 @@
 }
 .d-gate-item.d-lane-autofix {
   --lane: var(--d-wrong);
+}
+.d-gate-fix {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--d-graphite);
 }
 .d-gate-lane {
   font-weight: 700;

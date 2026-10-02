@@ -47,8 +47,10 @@ export function designRequest(report: Report, f: ColorFinding | ComponentFinding
       ``,
       `**Value:** \`${f.hex}\`  `,
       `**Role:** ${f.proposal.usage}  `,
-      `**Why it isn't an existing token:** nearest by color is \`${f.candidates[0]?.token ?? "none"}\`` +
-        (f.candidates[0] ? ` (ΔE ${f.candidates[0].deltaE.toFixed(1)}), but Jev judged a different role (same_role ${f.candidates[0].sameRole.toFixed(2)}).` : "."),
+      `**Why it isn't an existing token:** ` +
+        (f.candidates[0]
+          ? `nearest by color is \`${f.candidates[0].token}\` (ΔE ${f.candidates[0].deltaE.toFixed(1)}), but Jev judged a different role (same_role ${f.candidates[0].sameRole.toFixed(2)}).`
+          : `no existing token is close in color or role.`),
       ``,
       `**Used in:**`,
       ...uses.map((u) => `- \`${u.file}:${u.line}\` · \`${u.selector || u.component}\` · ${u.property}`),

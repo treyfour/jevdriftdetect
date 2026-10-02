@@ -2,7 +2,7 @@
   "include": ["demo"],
   "extensions": [".tsx", ".ts", ".css"],
   "gate": {
-    "base": "main",
+    "base": "HEAD",
     "block": ["autofix"],
     "warn": ["review", "propose"]
   }

@@ -5,7 +5,7 @@ import { loadComponents } from "@/lib/drift/designSystem";
 import { applyEdits } from "@/lib/drift/fix";
 import { runGate } from "@/lib/drift/gate";
 import { acceptProposal, applyAutofixes } from "@/lib/drift/resolve";
-import { readReport, saveReport, scan } from "@/lib/drift/scan";
+import { GATE_PATH, readReport, saveReport, scan } from "@/lib/drift/scan";
 
 // Local demo tool: these actions edit files in this working tree. Never deploy them.
 function assertLocal() {
@@ -63,4 +63,14 @@ export async function runGateAction() {
   assertLocal();
   await runGate();
   revalidatePath("/drift");
+}
+
+export async function fixGateAction() {
+  assertLocal();
+  const gate = readReport(GATE_PATH());
+  if (!gate) return;
+  applyAutofixes(gate);
+  await runGate();
+  revalidatePath("/drift");
+  revalidatePath("/demo");
 }

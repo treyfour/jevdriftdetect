@@ -46,7 +46,9 @@ export function addToken(token: Token) {
   const tokens = loadTokens();
   if (tokens.some((t) => t.name === token.name)) return tokens;
   tokens.push(token);
-  writeFileSync(TOKENS(), JSON.stringify({ tokens }, null, 2) + "\n");
+  // One token per line, so adding a token is a one-line diff in review.
+  const rows = tokens.map((t) => `    { "name": ${JSON.stringify(t.name)}, "value": ${JSON.stringify(t.value)}, "usage": ${JSON.stringify(t.usage)} }`);
+  writeFileSync(TOKENS(), `{\n  "tokens": [\n${rows.join(",\n")}\n  ]\n}\n`);
   writeTokensCss(tokens);
   return tokens;
 }
