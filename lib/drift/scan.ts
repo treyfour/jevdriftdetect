@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import path from "node:path";
 import { deltaE, parseColor } from "./color";
 import { judgeElement, judgeGap, judgePair, NEW_COMPONENT, NEW_ROLES, NOT_A_COMPONENT } from "./decide";
-import { loadAnswerKey, loadComponents, loadConfig, loadTokens } from "./designSystem";
+import { loadAnswerKey, loadComponents, loadConfig, loadExceptions, loadTokens } from "./designSystem";
 import { previewColorFix, previewComponentFix } from "./fix";
 import { JevSession } from "./jev";
 import { extractColors, extractElements } from "./extract";
@@ -98,8 +98,15 @@ export async function scan(opts: { base?: string } = {}): Promise<Report> {
   };
 
   const sources = new Map(files.map((f) => [f, readFileSync(path.join(process.cwd(), f), "utf8")]));
-  const literals = files.flatMap((f) => extractColors(f, sources.get(f)!)).filter((l) => keep(l.file, l.line));
-  const elements = files.flatMap((f) => extractElements(f, sources.get(f)!)).filter((e) => keep(e.file, e.line));
+  const exceptions = loadExceptions();
+  const literals = files
+    .flatMap((f) => extractColors(f, sources.get(f)!))
+    .filter((l) => keep(l.file, l.line))
+    .filter((l) => !exceptions.some((x) => x.file === l.file && x.raw?.toLowerCase() === l.raw.toLowerCase()));
+  const elements = files
+    .flatMap((f) => extractElements(f, sources.get(f)!))
+    .filter((e) => keep(e.file, e.line))
+    .filter((e) => !exceptions.some((x) => x.file === e.file && x.className === e.className));
 
   // Block: nearest tokens by deltaE. Pure code.
   const blocked = literals.map((l) => {

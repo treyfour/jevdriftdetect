@@ -9,8 +9,29 @@ const TOKENS_CSS = () => path.join(root(), "app", "tokens.css");
 export type DriftConfig = {
   include: string[];
   extensions: string[];
+  review: { base: string };
   gate: { base: string; block: Lane[]; warn: Lane[] };
 };
+
+// A deliberate one-off: the author kept a value outside the system, with a reason.
+export type DriftException = { file: string; raw?: string; className?: string; reason: string; decidedAt: string };
+
+const EXCEPTIONS = () => path.join(root(), "design-system", "exceptions.json");
+
+export function loadExceptions(): DriftException[] {
+  try {
+    return JSON.parse(readFileSync(EXCEPTIONS(), "utf8")).exceptions;
+  } catch {
+    return [];
+  }
+}
+
+export function addException(e: DriftException) {
+  const list = loadExceptions();
+  list.push(e);
+  const rows = list.map((x) => `    ${JSON.stringify(x)}`);
+  writeFileSync(EXCEPTIONS(), `{\n  "exceptions": [\n${rows.join(",\n")}\n  ]\n}\n`);
+}
 
 export function loadConfig(): DriftConfig {
   return JSON.parse(readFileSync(path.join(root(), "drift.config.json"), "utf8"));
