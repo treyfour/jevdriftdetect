@@ -11,7 +11,7 @@ export function Composer() {
           placeholder="Ask about customers, tickets or refunds"
         />
         <div className="flex items-center justify-between pt-1">
-          <span className="px-1.5 text-xs text-muted-foreground">Shift + Enter for a new line</span>
+          <span className="model-picker" style={{ background: "#7C5CFC", color: "#ffffff", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>Acme Fast ▾</span>
           <Button size="icon-sm" aria-label="Send">
             <ArrowUpIcon />
           </Button>
