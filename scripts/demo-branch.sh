@@ -29,13 +29,15 @@ git -c user.name="Sam Rivera (Design)" -c user.email="sam@acme.example" \
 rm -f .drift/review.json
 
 if [[ "${DEMO_PUSH:-1}" == "1" ]]; then
-  git push -q --force-with-lease -u origin "$BRANCH"
-  if ! gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+  git fetch -q --prune origin
+  git push -q --force -u origin "$BRANCH"
+  # A merged or closed demo PR doesn't count; open a fresh one.
+  if [[ "$(gh pr list --head "$BRANCH" --state open --json number --jq length)" == "0" ]]; then
     gh pr create --base "${BASE#origin/}" --head "$BRANCH" \
       --title "Chat: Summarize action and model picker" \
       --body "Adds a Summarize action to the thread header (agent-authored) and a model picker to the composer (design)." >/dev/null
   fi
-  echo "Pushed $BRANCH. PR: $(gh pr view "$BRANCH" --json url --jq .url)"
+  echo "Pushed $BRANCH. PR: $(gh pr list --head "$BRANCH" --state open --json url --jq '.[0].url')"
   echo "The Drift check posts its comment in about a minute."
 else
   echo "On $BRANCH, two commits ahead of $BASE (not pushed)."
