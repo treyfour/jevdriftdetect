@@ -1,56 +1,56 @@
-# Drift: design system drift detector
+# Drift: design system drift review
 
-Finds hardcoded colors and hand-styled elements, explains precisely what's wrong, and routes each one to a resolution. Jev (TypeSafe System One) answers small typed questions about **role**. Code does all extraction, color math (CIE76 ΔE), routing, and edits.
+When a branch adds a hardcoded color or a hand-styled element, Drift flags it, shows **what exists in the system** next to **what the branch proposes**, and lets the author pick the path. You see the real result before anything is committed. It flags drift but never hard-blocks: every flag needs *a* decision, not a particular one.
 
-| Lane | Who | What happens |
+Jev (TypeSafe System One) answers small typed questions about **role** ("is this the same job as `Button default`?"). Code does extraction, color math (CIE76 ΔE), grouping, edits, and git.
+
+| Path | Who it's for | What happens |
 |---|---|---|
-| **Auto-fix** | Engineers | An existing token or component already does this job. One-click swap (`var(--token)` or `<Button variant>`). |
-| **Review** | Designers | Related but not clearly the same role. Copy a ready-made question for design. |
-| **Propose** | Design system | A real role the system lacks. Add the token in one click, or copy a design request. |
-| **Leave** | Nobody | Intentional and outside the system (e.g. a third-party logo color). |
+| **Use existing** | Engineers who want it done | Swap in the system token or component (`<Button>`, `<Select>`, …). |
+| **Keep my design** | Designers making a creative call | Ships as designed. New values become tokens, and a design request is filed in `design-system/requests/`. |
+| **One-off exception** | Either | Kept exactly as written, with a reason in `design-system/exceptions.json`. |
 
 ## Setup
 
 ```bash
 npm install
 echo 'JEV_API_KEY=...' > .env.local   # JEVITE_API_KEY also works
-npm run drift                         # first scan, writes .drift/report.json
-npm run dev                           # http://localhost:3000/drift and /demo
+npm run demo:branch                   # creates feature/composer-polish off main
+npm run dev                           # http://localhost:3000/drift
 ```
 
 ## Demo run (about 5 minutes)
 
-1. **The messy app.** Open `/demo`. It looks fine, and that's the problem: 20 hardcoded colors and 5 hand-rolled elements.
-2. **The trap.** Open `/drift`. The hero shows brand red `#E5484D` at ΔE 8.1 from `--destructive`. A distance-only linter merges it, so the promo badge turns into an error color. Jev puts it at under 10% same role, so it becomes a new-token proposal instead.
-3. **The reverse.** Green `#16a34a` is ΔE 14 from `--success`. That's too far for a distance rule, but Jev puts it at 94% same role, so it gets fixed.
-4. **Accuracy.** About 19/20 routed correctly vs the planted answer key, compared with 13/20 by distance alone. Open "Where Jev and the key disagree" to show the honest miss.
-5. **Engineer path.** Click **Apply all fixes**. Refresh `/demo`: it looks identical, but now runs on tokens and `<Button>`, `<Badge>`, `<Alert>`.
-6. **Designer path.** In Propose, click **Add --promo-badge**. The token lands in `design-system/tokens.json` as a one-line diff, and the badge now uses it. **Copy request** shows the design-request markdown, including the "consider consolidating" note.
-7. **The gate.** Run `npm run demo:new-feature`, which drops a teammate's new component in. Open **PR gate** and click **Check this branch**. The result is *Merge blocked*: 4 items already have a system answer, and the new pine green goes to review. Click **Fix 4 and recheck** to get *Mergeable, with design review*.
+1. **The existing app.** Open `/app`: Acme Desk, a B2B assistant with a left nav, a chat thread, and a composer, fully on the design system.
+2. **A branch arrives.** `feature/composer-polish`, by "Sam (Design)", adds a violet model picker and a hand-rolled Send button to the composer. Open `/drift` and click **Review changes**: Jev checks the branch's new code in about 300 ms.
+3. **See it, side by side.** Each change shows *Existing in system* and *Proposed in branch*, both rendered live, plus Jev's read:
+   - **Send button:** "same job as Button default (100%)". `#2F6FEB` is ΔE 9.8 from `--primary`. Keeping it would add a near-duplicate, and the card says so.
+   - **Model picker:** "same job as Select default", but the designer wants the violet.
+4. **Choose, per persona.** Play the engineer: **Use existing `<Button>`**. Play the designer: **Keep my design** on the picker. The live preview and the composer close-up update after each choice. Switch options to compare them in context; nothing is committed yet.
+5. **Peek at the code.** Open "Code that will be committed": `var(--accent)`, `<Button variant="default">`, the `tokens.json` line, and the design request asking for a Select variant.
+6. **Accept.** One commit with a readable summary. The status reads **Ready to merge**: 0 new drift flags vs main.
+7. **Optional: one-off.** Rerun `npm run demo:branch` and pick **One-off exception** with a reason. The gate honors it.
 
-Reset between rehearsals with `npm run demo:reset`.
+The **Codebase scan** tab is the accuracy story. A messy store (`/demo`) with 20 planted drifts and an answer key gives about 19/20 for Jev vs 13/20 for color distance alone, including the brand-red trap (ΔE 8.1 from `--destructive`, but a different role).
 
-## PR gate
+## In CI
 
-`npm run drift:gate -- --base origin/main` judges only lines the branch adds. Existing code is never re-judged, so people can build freely.
-
-- **Blocks** (exit 1): new drift that already has a token or component. Fix with `npm run drift -- --fix`.
-- **Warns** (exit 0): net-new values and ambiguous roles. Design requests go into the job summary.
-
-Policy lives in `drift.config.json` (`gate.block`, `gate.warn`). The local default base is `HEAD`, which checks uncommitted work. CI passes the PR's base branch (see `.github/workflows/drift-gate.yml`).
+`npm run drift:gate -- --base origin/main` judges only the lines a PR adds and honors recorded exceptions. `.github/workflows/drift-gate.yml` runs it on pull requests and posts design requests to the job summary. Policy lives in `drift.config.json`.
 
 ## Known edges
 
-- Jev runs aren't perfectly deterministic. Near-ties (the promo-badge component is ~45/42 between `Badge/default` and a new component) can flip between Review and Propose. Set `DRIFT_REPLAY=1` to replay cached answers for a guaranteed-identical demo.
-- Tinted section surfaces (e.g. a mint `#ECFDF5` panel) can be judged "same role" as `--background`. A surface-token tier or a lightness guard in code would fix this.
-- Colors only (hex and rgb, including Tailwind arbitrary values). Spacing and type are next.
+- Jev isn't perfectly deterministic. Near-ties can flip between runs. `DRIFT_REPLAY=1` replays cached answers for an identical demo.
+- Tinted surfaces (e.g. a mint `#ECFDF5` panel) can be judged "same role" as `--background`. A lightness guard in code would fix it.
+- The proposed-element preview renders inline styles exactly. Tailwind-only hand-styling isn't extracted yet. Colors only (hex and rgb, including Tailwind arbitrary values).
+- The review's server actions edit and commit the working tree. They're for local use only and are disabled in production.
 
 ## Layout
 
 ```
-design-system/   tokens.json, components.json, answer_key.json (written before any Jev run)
-demo/            the messy store with planted drift
-lib/drift/       extract → block (ΔE) → decide (Jev) → route → fix / gate
-scripts/drift.ts CLI: scan, --fix, --gate
-app/drift/       report UI and server actions (local only: they edit the working tree)
+saas/                 Acme Desk, the app under review
+demo/                 the messy store for the codebase scan
+design-system/        tokens, components, answer key, requests/, exceptions.json
+lib/drift/            extract → block (ΔE) → decide (Jev) → route; review.ts (PR flow), fix.ts, gate.ts
+app/drift/            review + scan UI, server actions
+scripts/demo-branch.sh  builds the demo PR from scripts/fixtures/Composer.branch.tsx
 ```
