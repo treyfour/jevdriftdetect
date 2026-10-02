@@ -1,5 +1,6 @@
 import { Instrument_Sans } from "next/font/google";
 import "./drift.css";
+import "./review.css";
 
 const instrument = Instrument_Sans({ subsets: ["latin"], variable: "--font-drift" });
 

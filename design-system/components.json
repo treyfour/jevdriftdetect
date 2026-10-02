@@ -21,6 +21,13 @@
       }
     },
     {
+      "name": "Select",
+      "import": "@/components/ui/select",
+      "variants": {
+        "default": "dropdown trigger for choosing one option from a list, e.g. a model, plan, or filter"
+      }
+    },
+    {
       "name": "Alert",
       "import": "@/components/ui/alert",
       "variants": {

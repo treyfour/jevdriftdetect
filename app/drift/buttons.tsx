@@ -7,18 +7,20 @@ export function ActionButton({
   children,
   pendingLabel,
   variant = "quiet",
+  disabled,
 }: {
   action: () => Promise<void>;
   children: React.ReactNode;
   pendingLabel: string;
   variant?: "primary" | "quiet";
+  disabled?: boolean;
 }) {
   const [pending, start] = useTransition();
   return (
     <button
       type="button"
       className={`d-btn d-btn-${variant}`}
-      disabled={pending}
+      disabled={pending || disabled}
       aria-busy={pending}
       onClick={() => start(() => action())}
     >

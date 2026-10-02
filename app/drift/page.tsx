@@ -1,22 +1,18 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { loadTokens } from "@/lib/drift/designSystem";
-import { gateMarkdown } from "@/lib/drift/gate";
 import { designRequest } from "@/lib/drift/resolve";
-import { GATE_PATH, readReport } from "@/lib/drift/scan";
+import { readReport } from "@/lib/drift/scan";
 import type { ColorFinding, ComponentFinding, Lane, Report, Token } from "@/lib/drift/types";
 import {
   acceptProposalAction,
   applyAllAction,
   applyComponentAction,
   applyTokenAction,
-  fixGateAction,
-  runGateAction,
   runScanAction,
 } from "./actions";
 import { ActionButton, CopyButton } from "./buttons";
+import { ReviewView } from "./review-view";
 
 const JUDGMENT_LANES: { lane: Lane; title: string; who: string; meaning: string }[] = [
   { lane: "review", title: "Review", who: "Designers", meaning: "Related to the system, but the role isn't clear. A person decides." },
@@ -469,83 +465,11 @@ function ScanView({ report, tokens }: { report: Report; tokens: Token[] }) {
   );
 }
 
-function GateView({ gate }: { gate: Report | null }) {
-  let workflow = "";
-  try {
-    workflow = readFileSync(path.join(process.cwd(), ".github", "workflows", "drift-gate.yml"), "utf8");
-  } catch {}
-  const items = gate ? [...gate.colors.filter((c) => c.lane !== "leave"), ...gate.components.filter((c) => c.lane !== "leave")] : [];
-  return (
-    <section className="d-gate">
-      <div className="d-gate-intro">
-        <h1>Build freely. Merge clean.</h1>
-        <p>
-          The gate judges only the lines a branch adds, never existing code. Drift that already has a system answer blocks the merge, with a one-command fix.
-          Net-new values don&rsquo;t block. They go to design review as requests.
-        </p>
-        <ActionButton action={runGateAction} pendingLabel="Checking branch…" variant="primary">
-          Check this branch
-        </ActionButton>
-      </div>
-      {gate?.gate && (
-        <div className={`d-gate-result d-gate-${gate.gate.status}`}>
-          <h2>{gate.gate.status === "fail" ? "Merge blocked" : gate.gate.status === "warn" ? "Mergeable, with design review" : "Clean: no new drift"}</h2>
-          <p>
-            Compared with <code>{gate.base}</code>: {gate.stats.literals} new color literals and {gate.stats.elements} new hand-styled elements, judged in{" "}
-            {gate.stats.ms} ms. {gate.gate.blocking} blocking, {gate.gate.warnings} for review.
-          </p>
-          {items.length > 0 && (
-            <ul className="d-gate-list">
-              {items.map((f) => (
-                <li key={f.id} className={`d-gate-item d-lane-${f.lane}`}>
-                  <span className="d-gate-lane">{f.lane === "autofix" ? "blocks" : f.lane}</span>
-                  <code>
-                    {f.file}:{f.line}
-                  </code>
-                  <span>
-                    {"raw" in f
-                      ? f.lane === "propose"
-                        ? `${f.raw}: request new token ${f.proposal?.name}`
-                        : `${f.raw}: use var(${f.best?.token})`
-                      : f.lane === "propose"
-                        ? `<${f.tag}> "${f.text}": request a new component`
-                        : `<${f.tag}> "${f.text}": use ${variantTag(f.choice)}`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {gate.gate.blocking > 0 && (
-            <div className="d-gate-fix">
-              <ActionButton action={fixGateAction} pendingLabel="Fixing and rechecking…" variant="primary">
-                Fix {gate.gate.blocking} and recheck
-              </ActionButton>
-              <span>
-                Same as <code>npm run drift -- --fix</code> locally.
-              </span>
-            </div>
-          )}
-          <details className="d-details">
-            <summary>PR comment preview</summary>
-            <pre className="d-pre">{gateMarkdown(gate)}</pre>
-          </details>
-        </div>
-      )}
-      {workflow && (
-        <details className="d-details">
-          <summary>.github/workflows/drift-gate.yml</summary>
-          <pre className="d-pre">{workflow}</pre>
-        </details>
-      )}
-    </section>
-  );
-}
 
 export default async function DriftPage({ searchParams }: PageProps<"/drift">) {
   await connection();
-  const view = (await searchParams).view === "gate" ? "gate" : "scan";
+  const view = (await searchParams).view === "scan" ? "scan" : "review";
   const report = readReport();
-  const gate = readReport(GATE_PATH());
   const tokens = loadTokens();
 
   return (
@@ -553,16 +477,16 @@ export default async function DriftPage({ searchParams }: PageProps<"/drift">) {
       <nav className="d-bar" aria-label="Drift">
         <span className="d-mark">Drift</span>
         <div className="d-tabs">
-          <Link href="/drift" aria-current={view === "scan" ? "page" : undefined}>
-            Codebase scan
+          <Link href="/drift" aria-current={view === "review" ? "page" : undefined}>
+            Pull request
           </Link>
-          <Link href="/drift?view=gate" aria-current={view === "gate" ? "page" : undefined}>
-            PR gate
+          <Link href="/drift?view=scan" aria-current={view === "scan" ? "page" : undefined}>
+            Codebase scan
           </Link>
         </div>
         <div className="d-bar-end">
-          <a href="/demo" target="_blank" rel="noreferrer">
-            Open the store
+          <a href={view === "scan" ? "/demo" : "/app"} target="_blank" rel="noreferrer">
+            {view === "scan" ? "Open the store" : "Open the app"}
           </a>
           {view === "scan" && (
             <ActionButton action={runScanAction} pendingLabel="Scanning…">
@@ -572,14 +496,14 @@ export default async function DriftPage({ searchParams }: PageProps<"/drift">) {
         </div>
       </nav>
       <main className="d-main">
-        {view === "gate" ? (
-          <GateView gate={gate} />
+        {view === "review" ? (
+          <ReviewView />
         ) : report ? (
           <ScanView report={report} tokens={tokens} />
         ) : (
           <section className="d-empty-state">
             <h1>No scan yet</h1>
-            <p>Scan the demo store for hardcoded colors and hand-styled elements.</p>
+            <p>Scan the codebase for hardcoded colors and hand-styled elements.</p>
             <ActionButton action={runScanAction} pendingLabel="Scanning…" variant="primary">
               Scan the codebase
             </ActionButton>

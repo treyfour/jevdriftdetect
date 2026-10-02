@@ -247,6 +247,32 @@ export function setChoice(id: string, choice: Choice): ReviewState | null {
   return applyChoices(s);
 }
 
+export function branchInfo(base: string) {
+  const branch = git("branch", "--show-current");
+  let commits: { sha: string; author: string; subject: string }[] = [];
+  try {
+    commits = git("log", "--format=%h%x09%an%x09%s", `${base}..HEAD`)
+      .split("\n")
+      .filter(Boolean)
+      .map((l) => {
+        const [sha, author, subject] = l.split("\t");
+        return { sha, author, subject };
+      });
+  } catch {}
+  return { branch, head: git("rev-parse", "--short", "HEAD"), commits };
+}
+
+// What accepting would commit right now: the preview's diff against HEAD.
+export function workingDiff(s: ReviewState): string {
+  if (!s.touched.length) return "";
+  const tracked = git("diff", "--no-color", "HEAD", "--", ...s.touched);
+  const untracked = git("ls-files", "--others", "--exclude-standard", "--", ...s.touched)
+    .split("\n")
+    .filter(Boolean)
+    .map((f) => `+++ new file: ${f}\n` + readFileSync(path.join(process.cwd(), f), "utf8").replace(/^/gm, "+"));
+  return [tracked, ...untracked].filter(Boolean).join("\n");
+}
+
 export function pendingCount(s: ReviewState) {
   return s.changes.filter((c) => !s.choices[c.id] || s.choices[c.id].kind === "proposed").length;
 }
